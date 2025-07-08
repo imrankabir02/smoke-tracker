@@ -1,0 +1,98 @@
+{% extends 'tracker/base.html' %}
+
+{% block content %}
+    <h2>My Stats</h2>
+    <p>Total smokes logged: {{ total_smokes }}</p>
+    <p>Total cost: ${{ total_cost|floatformat:2 }}</p>
+    {% if last_smoke %}
+        <p>Last smoke: {{ last_smoke.timestamp }}</p>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <h3>Today's Smokes (by Hour)</h3>
+            <canvas id="dailyChart"></canvas>
+        </div>
+    </div>
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h3>This Week's Smokes (by Day)</h3>
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h3>This Month's Smokes (by Week)</h3>
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function createChart(ctx, type, labels, data, label, pointStyle = false) {
+            const options = {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            };
+
+            if (pointStyle) {
+                options.elements = {
+                    point: {
+                        radius: 5,
+                        pointStyle: 'circle',
+                        backgroundColor: 'rgba(75, 192, 192, 1)',
+                    }
+                };
+            }
+
+            new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        tension: 0.1
+                    }]
+                },
+                options: options
+            });
+        }
+
+        createChart(
+            document.getElementById('dailyChart').getContext('2d'),
+            'line',
+            {{ daily_labels|safe }},
+            {{ daily_counts|safe }},
+            'Smokes by Hour',
+            true
+        );
+
+        createChart(
+            document.getElementById('weeklyChart').getContext('2d'),
+            'line',
+            {{ weekly_labels|safe }},
+            {{ weekly_counts|safe }},
+            'Smokes by Day',
+            true
+        );
+
+        createChart(
+            document.getElementById('monthlyChart').getContext('2d'),
+            'line',
+            {{ monthly_labels|safe }},
+            {{ monthly_counts|safe }},
+            'Smokes by Week',
+            true
+        );
+    </script>
+{% endblock %}
