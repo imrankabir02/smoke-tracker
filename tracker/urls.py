@@ -6,6 +6,7 @@ urlpatterns = [
     path('log/', views.log_smoke, name='log_smoke'),
     path('logs/', views.log_list, name='log_list'),
     path('stats/', views.stats, name='stats'),
+    path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('brands/', views.brand_list, name='brand_list'),
     path('add-brand/', views.add_brand, name='add_brand'),
     path('edit-brand/<int:pk>/', views.edit_brand, name='edit_brand'),
@@ -15,4 +16,6 @@ urlpatterns = [
     path('quick-log/', views.quick_log, name='quick_log'),
     path('signup/', views.signup, name='signup'),
     path('profile/', views.profile_settings, name='profile_settings'),
+    path('setup/', views.setup_wizard, name='setup_start'),
+    path('setup/<int:step>/', views.setup_wizard, name='setup_wizard'),
 ]

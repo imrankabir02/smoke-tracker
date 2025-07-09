@@ -9,6 +9,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     timezone = models.CharField(max_length=50, default='UTC', choices=[(tz, tz) for tz in pytz.all_timezones])
     currency = models.CharField(max_length=10, default='USD')
+    setup_complete = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"

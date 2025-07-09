@@ -51,6 +51,9 @@
                                 <li><a class="dropdown-item" href="{% url 'set_goal' %}">Set Daily Goal</a></li>
                                 <li><a class="dropdown-item" href="{% url 'set_defaults' %}">Set Defaults</a></li>
                                 <li><a class="dropdown-item" href="{% url 'profile_settings' %}">Settings</a></li>
+                                {% if user.is_superuser %}
+                                <li><a class="dropdown-item" href="{% url 'admin_dashboard' %}">Admin Dashboard</a></li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form action="{% url 'logout' %}" method="post">

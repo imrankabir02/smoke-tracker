@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg
@@ -23,7 +24,7 @@ def signup(request):
             profile.save()
             login(request, user)
             messages.success(request, 'Welcome! Your account has been created.')
-            return redirect('home')
+            return redirect('setup_start')
     else:
         form = SignUpForm()
     return render(request, 'registration/signup.html', {'form': form})
@@ -56,7 +57,7 @@ def home(request):
     progress_percentage = min(100, (today_smokes / daily_limit) * 100) if daily_limit > 0 else 0
     
     # Recent activity
-    recent_logs = logs[:5]
+    recent_logs = logs[:1]
     
     context = {
         'hours_since_last': hours_since_last,
@@ -258,7 +259,7 @@ def brand_list(request):
 @login_required
 def add_brand(request):
     if request.method == 'POST':
-        form = UserBrandForm(request.POST)
+        form = UserBrandForm(request.POST, user=request.user)
         if form.is_valid():
             user_brand = form.save(commit=False)
             user_brand.user = request.user
@@ -266,7 +267,7 @@ def add_brand(request):
             messages.success(request, 'Brand added to your list successfully!')
             return redirect('brand_list')
     else:
-        form = UserBrandForm()
+        form = UserBrandForm(user=request.user)
     
     return render(request, 'tracker/brand_form.html', {'form': form})
 
@@ -274,13 +275,13 @@ def add_brand(request):
 def edit_brand(request, pk):
     user_brand = get_object_or_404(UserBrand, pk=pk, user=request.user)
     if request.method == 'POST':
-        form = UserBrandForm(request.POST, instance=user_brand)
+        form = UserBrandForm(request.POST, instance=user_brand, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Brand updated successfully!')
             return redirect('brand_list')
     else:
-        form = UserBrandForm(instance=user_brand)
+        form = UserBrandForm(instance=user_brand, user=request.user)
     
     return render(request, 'tracker/brand_form.html', {'form': form, 'brand': user_brand})
 
@@ -368,3 +369,102 @@ def quick_log(request):
         messages.error(request, 'Please set your default preferences first.')
         return redirect('set_defaults')
     return redirect('home')
+
+@login_required
+def setup_wizard(request, step=1):
+    # Redirect user to home if setup is already complete
+    if 'setup_complete' in request.session:
+        return redirect('home')
+
+    if step == 1:
+        # Step 1: Set Daily Goal
+        goal, created = DailyGoal.objects.get_or_create(user=request.user)
+        if request.method == 'POST':
+            form = DailyGoalForm(request.POST, instance=goal)
+            if form.is_valid():
+                form.save()
+                request.session['setup_step_1_complete'] = True
+                return redirect('setup_wizard', step=2)
+        else:
+            form = DailyGoalForm(instance=goal)
+        
+        return render(request, 'tracker/setup_step_1.html', {'form': form, 'step': 1})
+
+    elif step == 2:
+        # Step 2: Add a Brand
+        if not request.session.get('setup_step_1_complete'):
+            return redirect('setup_wizard', step=1)
+        if request.method == 'POST':
+            form = UserBrandForm(request.POST, user=request.user)
+            if form.is_valid():
+                brand = form.cleaned_data['brand']
+                price = form.cleaned_data['price']
+                user_brand, created = UserBrand.objects.get_or_create(
+                    user=request.user,
+                    brand=brand,
+                    defaults={'price': price}
+                )
+                if created:
+                    messages.success(request, 'Brand added successfully!')
+                else:
+                    # Optionally, update the price if the brand already exists
+                    user_brand.price = price
+                    user_brand.save()
+                    messages.info(request, 'Brand price updated.')
+
+                if 'add_another' in request.POST:
+                    return redirect('setup_wizard', step=2)
+                return redirect('setup_wizard', step=3)
+        else:
+            form = UserBrandForm(user=request.user)
+        
+        brands = UserBrand.objects.filter(user=request.user)
+        return render(request, 'tracker/setup_step_2.html', {'form': form, 'brands': brands, 'step': 2})
+
+    elif step == 3:
+        # Step 3: Set Defaults
+        if not request.session.get('setup_step_1_complete'):
+            return redirect('setup_wizard', step=1)
+        if not UserBrand.objects.filter(user=request.user).exists():
+            messages.error(request, "Please add at least one brand before setting defaults.")
+            return redirect('setup_wizard', step=2)
+
+        defaults, created = UserDefault.objects.get_or_create(user=request.user)
+        if request.method == 'POST':
+            form = UserDefaultForm(request.POST, instance=defaults)
+            form.fields['user_brand'].queryset = UserBrand.objects.filter(user=request.user)
+            if form.is_valid():
+                form.save()
+                profile = request.user.profile
+                profile.setup_complete = True
+                profile.save()
+                request.session['setup_complete'] = True # Keep session for immediate redirect
+                messages.success(request, 'Setup complete! Welcome to Smoke Tracker.')
+                return redirect('home')
+        else:
+            form = UserDefaultForm(instance=defaults)
+            form.fields['user_brand'].queryset = UserBrand.objects.filter(user=request.user)
+            
+        return render(request, 'tracker/setup_step_3.html', {'form': form, 'step': 3})
+
+    return redirect('home')
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_dashboard(request):
+    total_users = User.objects.count()
+    total_brands = Brand.objects.count()
+    total_smokelogs = SmokeLog.objects.count()
+
+    user_smoke_counts = User.objects.annotate(smoke_count=Count('smokelog')).order_by('-smoke_count')[:10]
+
+    brand_smoke_counts = Brand.objects.annotate(smoke_count=Count('userbrand__smokelog')).order_by('-smoke_count')
+
+    context = {
+        'total_users': total_users,
+        'total_brands': total_brands,
+        'total_smokelogs': total_smokelogs,
+        'user_smoke_counts': user_smoke_counts,
+        'brand_smoke_counts': brand_smoke_counts,
+    }
+    return render(request, 'tracker/admin_dashboard.html', context)

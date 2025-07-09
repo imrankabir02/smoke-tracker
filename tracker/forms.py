@@ -37,6 +37,15 @@ class BrandForm(forms.ModelForm):
         }
 
 class UserBrandForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super(UserBrandForm, self).__init__(*args, **kwargs)
+        if self.user:
+            used_brand_ids = UserBrand.objects.filter(user=self.user).values_list('brand_id', flat=True)
+            if self.instance and self.instance.pk:
+                used_brand_ids = used_brand_ids.exclude(brand_id=self.instance.brand_id)
+            self.fields['brand'].queryset = Brand.objects.exclude(id__in=used_brand_ids)
+
     class Meta:
         model = UserBrand
         fields = ['brand', 'price']
