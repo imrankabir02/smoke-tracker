@@ -1,0 +1,35 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Setup Step 2: Add Your Brands{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Step 2 of 3: Add Your Brands</h3>
+            </div>
+            <div class="card-body">
+                <p>Now, let's add the brands you smoke and their prices. You can add multiple brands.</p>
+                
+                {% if brands %}
+                <h5>Your Brands:</h5>
+                <ul>
+                    {% for brand in brands %}
+                    <li>{{ brand.brand.name }} - {{ brand.price }}</li>
+                    {% endfor %}
+                </ul>
+                <hr>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary">Save and Continue to Next Step</button>
+                    <button type="submit" name="add_another" class="btn btn-secondary">Save and Add Another Brand</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

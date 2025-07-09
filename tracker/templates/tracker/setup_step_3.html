@@ -1,0 +1,23 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Setup Step 3: Set Your Defaults{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Step 3 of 3: Set Your Defaults</h3>
+            </div>
+            <div class="card-body">
+                <p>Almost done! Now, set your default preferences for quick logging. This will make it faster to log a smoke.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-success">Complete Setup</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

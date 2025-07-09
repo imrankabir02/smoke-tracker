@@ -1,0 +1,75 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Admin Dashboard - Smoke Tracker{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Admin Dashboard</h1>
+
+    <!-- Key Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Total Users</div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ total_users }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Total Brands</div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ total_brands }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">Total Smoke Logs</div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ total_smokelogs }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Users -->
+    <div class="card mb-4">
+        <div class="card-header">
+            Top 10 Users by Smoke Logs
+        </div>
+        <div class="card-body">
+            <ul class="list-group">
+                {% for user in user_smoke_counts %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ user.username }}
+                        <span class="badge bg-primary rounded-pill">{{ user.smoke_count }}</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item">No user data available.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Brand Popularity -->
+    <div class="card">
+        <div class="card-header">
+            Brand Popularity
+        </div>
+        <div class="card-body">
+            <ul class="list-group">
+                {% for brand in brand_smoke_counts %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ brand.name }}
+                        <span class="badge bg-success rounded-pill">{{ brand.smoke_count }}</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item">No brand data available.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
