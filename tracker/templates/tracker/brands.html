@@ -1,0 +1,41 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Brands - Smoke Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Brands</h1>
+    <a href="{% url 'add_brand' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add New Brand
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Added On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for brand in brands %}
+                    <tr>
+                        <td>{{ brand.name }}</td>
+                        <td>BDT{{ brand.price }}</td>
+                        <td>{{ brand.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">No brands added yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

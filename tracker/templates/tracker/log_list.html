@@ -1,16 +1,97 @@
 {% extends 'tracker/base.html' %}
 
+{% block title %}Smoke Logs - Smoke Tracker{% endblock %}
+
 {% block content %}
-    <h2>My Smoke Logs</h2>
-    <ul class="list-group">
-        {% for log in logs %}
-            <li class="list-group-item">
-                {{ log.timestamp }}
-                {% if log.brand %} - {{ log.brand.name }}{% endif %}
-                {% if log.note %} - {{ log.note }}{% endif %}
+<h1 class="mb-4">My Smoke Logs</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="trigger" class="form-label">Filter by Trigger</label>
+                <select name="trigger" id="trigger" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Triggers</option>
+                    {% for value, display in trigger_choices %}
+                        <option value="{{ value }}" {% if trigger_filter == value %}selected{% endif %}>{{ display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="date_from" class="form-label">From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ date_from|default:'' }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="date_to" class="form-label">To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ date_to|default:'' }}" class="form-control">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Brand</th>
+                        <th>Trigger</th>
+                        <th>Mood Before</th>
+                        <th>Mood After</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page_obj %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"M d, Y, H:i" }}</td>
+                        <td>{{ log.user_brand.brand.name|default:"N/A" }}</td>
+                        <td>{{ log.get_trigger_display }}</td>
+                        <td>{{ log.get_mood_before_display }}</td>
+                        <td>{{ log.get_mood_after_display }}</td>
+                        <td>{{ log.note|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">No logs found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">&laquo; First</a>
             </li>
-        {% empty %}
-            <li class="list-group-item">No logs yet.</li>
-        {% endfor %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+            </li>
+        {% endif %}
     </ul>
+</nav>
+{% endif %}
 {% endblock %}

@@ -1,10 +1,81 @@
 {% extends 'tracker/base.html' %}
+{% load tracker_extras %}
+
+{% block title %}Dashboard - Smoke Tracker{% endblock %}
 
 {% block content %}
-    <h1>Welcome to Smoke Tracker</h1>
-    <p>Your personal tool to monitor and control your smoking habits.</p>
-    {% if not user.is_authenticated %}
-        <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
-        <a href="{% url 'signup' %}" class="btn btn-secondary">Sign Up</a>
-    {% endif %}
+<div class="dashboard-grid">
+    <div class="main-widget streak-counter">
+        <h3><i class="bi bi-trophy"></i> Current Streak</h3>
+        <h1>{{ hours_since_last }} hours, {{ minutes_since_last }} minutes</h1>
+        <p class="mb-0">since your last smoke</p>
+    </div>
+
+    <div class="main-widget progress-card">
+        <h4><i class="bi bi-target"></i> Daily Progress</h4>
+        <h2>{{ today_smokes }} / {{ daily_limit }}</h2>
+        <div class="progress mb-2" style="height: 10px;">
+            <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%"></div>
+        </div>
+        <small>
+            {% if today_smokes < daily_limit %}
+                {{ daily_limit|add:"-"|add:today_smokes }} remaining today
+            {% else %}
+                Daily limit reached
+            {% endif %}
+        </small>
+    </div>
+
+    <div class="main-widget cta-widget">
+        <a href="{% url 'quick_log' %}" class="btn btn-log-smoke w-100 h-100">
+            <i class="bi bi-plus-circle-fill"></i>
+            <span>Log a Smoke</span>
+        </a>
+    </div>
+
+    <div class="main-widget quick-actions">
+        <h5 class="widget-title">Quick Actions</h5>
+        <div class="action-buttons">
+            <a href="{% url 'log_smoke' %}" class="btn btn-primary w-100 mb-2">
+                <i class="bi bi-plus-circle"></i> Manual Log
+            </a>
+            <a href="{% url 'stats' %}" class="btn btn-info w-100 mb-2">
+                <i class="bi bi-graph-up"></i> View Stats
+            </a>
+            <a href="{% url 'set_goal' %}" class="btn btn-secondary w-100">
+                <i class="bi bi-gear"></i> Set Goal
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if recent_logs %}
+<div class="mt-4">
+    <h3>Recent Activity</h3>
+    <div class="activity-list">
+        {% for log in recent_logs %}
+        <div class="activity-card">
+            <div class="activity-time">
+                <i class="bi bi-clock"></i> {{ log.timestamp|date:"M d, H:i" }}
+            </div>
+            <div class="activity-details">
+                <div><strong>Brand:</strong> {{ log.user_brand.brand.name|default:"Unknown" }}</div>
+                <div><strong>Trigger:</strong> {{ log.get_trigger_display }}</div>
+                <div>
+                    <strong>Mood Change:</strong>
+                    {% if log.mood_difference > 0 %}
+                        <span class="text-success">+{{ log.mood_difference }}</span>
+                    {% elif log.mood_difference < 0 %}
+                        <span class="text-danger">{{ log.mood_difference }}</span>
+                    {% else %}
+                        <span class="text-muted">0</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <a href="{% url 'log_list' %}" class="btn btn-outline-primary mt-3">View All Logs</a>
+</div>
+{% endif %}
 {% endblock %}

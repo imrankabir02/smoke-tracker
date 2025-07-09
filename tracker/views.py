@@ -1,124 +1,370 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
-from .models import SmokeLog, Brand
-from .forms import SmokeLogForm, BrandForm
-from django.db.models import Count, Sum
-from django.db.models.functions import TruncDate, TruncWeek, TruncHour
-import json
-from datetime import datetime, timedelta
+from django.contrib import messages
 from django.utils import timezone
+from django.db.models import Count, Sum, Avg
+from datetime import datetime, timedelta
+from .models import SmokeLog, Brand, DailyGoal, UserDefault, UserBrand, Profile
+from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm
+from .utils import calculate_streak, get_trigger_stats, get_mood_impact
+
+def signup(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            profile = Profile.objects.create(
+                user=user,
+                timezone=form.cleaned_data['timezone'],
+                currency=form.cleaned_data['currency']
+            )
+            profile.save()
+            login(request, user)
+            messages.success(request, 'Welcome! Your account has been created.')
+            return redirect('home')
+    else:
+        form = SignUpForm()
+    return render(request, 'registration/signup.html', {'form': form})
 
 @login_required
 def home(request):
-    return render(request, 'tracker/home.html')
+    timezone.activate(request.user.profile.timezone)
+    logs = SmokeLog.objects.filter(user=request.user)
+    last_smoke = logs.first()
+    
+    # Calculate streak
+    if last_smoke:
+        time_since_last = timezone.now() - last_smoke.timestamp
+        hours_since_last = int(time_since_last.total_seconds() / 3600)
+        minutes_since_last = int((time_since_last.total_seconds() % 3600) / 60)
+    else:
+        hours_since_last = 0
+        minutes_since_last = 0
+    
+    # Daily progress
+    today = timezone.now().date()
+    today_smokes = logs.filter(timestamp__date=today).count()
+    
+    try:
+        daily_goal = DailyGoal.objects.get(user=request.user)
+        daily_limit = daily_goal.daily_limit
+    except DailyGoal.DoesNotExist:
+        daily_limit = 10 # Default value
+    
+    progress_percentage = min(100, (today_smokes / daily_limit) * 100) if daily_limit > 0 else 0
+    
+    # Recent activity
+    recent_logs = logs[:5]
+    
+    context = {
+        'hours_since_last': hours_since_last,
+        'minutes_since_last': minutes_since_last,
+        'today_smokes': today_smokes,
+        'daily_limit': daily_limit,
+        'progress_percentage': progress_percentage,
+        'recent_logs': recent_logs,
+        'last_smoke': last_smoke,
+    }
+    
+    return render(request, 'tracker/home.html', context)
 
 @login_required
 def log_smoke(request):
     if request.method == 'POST':
         form = SmokeLogForm(request.POST)
+        form.fields['user_brand'].queryset = UserBrand.objects.filter(user=request.user)
         if form.is_valid():
-            log = form.save(commit=False)
-            log.user = request.user
-            log.save()
-            return redirect('log_list')
+            smoke_log = form.save(commit=False)
+            smoke_log.user = request.user
+            smoke_log.save()
+            messages.success(request, 'Smoke logged successfully!')
+            return redirect('home')
     else:
         form = SmokeLogForm()
+        form.fields['user_brand'].queryset = UserBrand.objects.filter(user=request.user)
+    
     return render(request, 'tracker/log_smoke.html', {'form': form})
 
 @login_required
 def log_list(request):
-    logs = SmokeLog.objects.filter(user=request.user).order_by('-timestamp')
-    return render(request, 'tracker/log_list.html', {'logs': logs})
+    logs = SmokeLog.objects.filter(user=request.user)
+    
+    # Filter by trigger
+    trigger_filter = request.GET.get('trigger')
+    if trigger_filter:
+        logs = logs.filter(trigger=trigger_filter)
+    
+    # Filter by date range
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        logs = logs.filter(timestamp__date__gte=date_from)
+    if date_to:
+        logs = logs.filter(timestamp__date__lte=date_to)
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(logs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'trigger_choices': SmokeLog.TRIGGER_CHOICES,
+        'trigger_filter': trigger_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'tracker/log_list.html', context)
+
+@login_required
+def stats(request):
+    timezone.activate(request.user.profile.timezone)
+    logs = SmokeLog.objects.filter(user=request.user)
+    total_smokes = logs.count()
+
+    if total_smokes == 0:
+        return render(request, 'tracker/stats.html', {'no_data': True})
+
+    last_smoke = logs.first()
+    total_cost = logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
+
+    # Time-based stats
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+
+    today_logs = logs.filter(timestamp__date=today)
+    week_logs = logs.filter(timestamp__date__gte=week_ago)
+    month_logs = logs.filter(timestamp__date__gte=month_ago)
+
+    today_smokes = today_logs.count()
+    this_week = week_logs.count()
+    this_month = month_logs.count()
+
+    today_cost = today_logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
+    week_cost = week_logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
+    month_cost = month_logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
+
+    last_week = logs.filter(
+        timestamp__date__gte=week_ago - timedelta(days=7),
+        timestamp__date__lt=week_ago
+    ).count()
+
+    # Advanced analytics
+    trigger_stats = get_trigger_stats(logs)
+    trigger_labels = [item['trigger_display'] for item in trigger_stats]
+    trigger_counts = [item['count'] for item in trigger_stats]
+    mood_impact = get_mood_impact(logs)
+    streak_info = calculate_streak(logs)
+
+    # Daily average
+    if logs.exists():
+        first_log = logs.last()
+        days_tracking = (timezone.now().date() - first_log.timestamp.date()).days + 1
+        daily_average = round(total_smokes / days_tracking, 1)
+    else:
+        daily_average = 0
+
+    # Goal limits
+    try:
+        daily_goal = DailyGoal.objects.get(user=request.user).daily_limit
+    except DailyGoal.DoesNotExist:
+        daily_goal = 0
+    
+    weekly_limit = daily_goal * 7 if daily_goal else 0
+    monthly_limit = daily_goal * 30 if daily_goal else 0
+
+
+    # Chart data
+    # Daily
+    daily_counts = [0] * 24
+    for log in today_logs:
+        local_time = log.timestamp.astimezone(timezone.get_current_timezone())
+        daily_counts[local_time.hour] += 1
+    daily_labels = [f"{h:02d}:00" for h in range(24)]
+
+    # Weekly
+    weekly_counts_dict = {}
+    for i in range(7):
+        day = today - timedelta(days=i)
+        weekly_counts_dict[day.strftime('%Y-%m-%d')] = 0
+    
+    for log in week_logs:
+        local_time = log.timestamp.astimezone(timezone.get_current_timezone())
+        log_date_str = local_time.date().strftime('%Y-%m-%d')
+        if log_date_str in weekly_counts_dict:
+            weekly_counts_dict[log_date_str] += 1
+            
+    weekly_labels = [(today - timedelta(days=i)).strftime('%a') for i in range(6, -1, -1)]
+    weekly_dates = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(6, -1, -1)]
+    weekly_counts = [weekly_counts_dict.get(d, 0) for d in weekly_dates]
+
+    # Monthly
+    monthly_counts_dict = {}
+    for i in range(4):
+        week_start = today - timedelta(weeks=i)
+        week_num = week_start.strftime('%W')
+        monthly_counts_dict[week_num] = 0
+
+    for log in month_logs:
+        local_time = log.timestamp.astimezone(timezone.get_current_timezone())
+        week_num = local_time.strftime('%W')
+        if week_num in monthly_counts_dict:
+            monthly_counts_dict[week_num] += 1
+
+    last_four_weeks = [(today - timedelta(weeks=i)).strftime('%W') for i in range(3, -1, -1)]
+    monthly_labels = [f"Week {w}" for w in last_four_weeks]
+    monthly_counts = [monthly_counts_dict.get(w, 0) for w in last_four_weeks]
+
+    context = {
+        'total_smokes': total_smokes,
+        'total_cost': total_cost,
+        'last_smoke': last_smoke,
+        'today_smokes': today_smokes,
+        'this_week': this_week,
+        'this_month': this_month,
+        'today_cost': today_cost,
+        'week_cost': week_cost,
+        'month_cost': month_cost,
+        'last_week': last_week,
+        'daily_average': daily_average,
+        'trigger_stats': trigger_stats,
+        'trigger_labels': trigger_labels,
+        'trigger_counts': trigger_counts,
+        'mood_impact': mood_impact,
+        'streak_info': streak_info,
+        'daily_goal': daily_goal,
+        'weekly_limit': weekly_limit,
+        'monthly_limit': monthly_limit,
+        'daily_labels': daily_labels,
+        'daily_counts': daily_counts,
+        'weekly_labels': weekly_labels,
+        'weekly_counts': weekly_counts,
+        'monthly_labels': monthly_labels,
+        'monthly_counts': monthly_counts,
+    }
+
+    return render(request, 'tracker/stats.html', context)
+
+@login_required
+def brand_list(request):
+    brands = UserBrand.objects.filter(user=request.user)
+    return render(request, 'tracker/brand_list.html', {'brands': brands})
 
 @login_required
 def add_brand(request):
     if request.method == 'POST':
-        form = BrandForm(request.POST)
+        form = UserBrandForm(request.POST)
         if form.is_valid():
-            form.save()
+            user_brand = form.save(commit=False)
+            user_brand.user = request.user
+            user_brand.save()
+            messages.success(request, 'Brand added to your list successfully!')
             return redirect('brand_list')
     else:
-        form = BrandForm()
-    return render(request, 'tracker/add_brand.html', {'form': form})
+        form = UserBrandForm()
+    
+    return render(request, 'tracker/brand_form.html', {'form': form})
 
 @login_required
-def brand_list(request):
-    brands = Brand.objects.all()
-    return render(request, 'tracker/brand_list.html', {'brands': brands})
-
-@login_required
-def stats(request):
-    user = request.user
-    now = timezone.now()
-    
-    # General stats
-    all_logs = SmokeLog.objects.filter(user=user)
-    total_smokes = all_logs.count()
-    last_smoke = all_logs.order_by('-timestamp').first()
-    total_cost = all_logs.aggregate(total_cost=Sum('brand__price'))['total_cost'] or 0
-
-    # Daily chart (count vs hour for all 24 hours)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_logs = all_logs.filter(timestamp__gte=today_start)
-    daily_data = today_logs.annotate(hour=TruncHour('timestamp')).values('hour').annotate(count=Count('id')).order_by('hour')
-    daily_counts_dict = {d['hour'].hour: d['count'] for d in daily_data}
-    daily_labels = [f"{h:02d}:00" for h in range(24)]
-    daily_counts = [daily_counts_dict.get(h, 0) for h in range(24)]
-
-    # Weekly chart (count vs day for all 7 days)
-    week_start = today_start - timedelta(days=now.weekday())
-    week_logs = all_logs.filter(timestamp__gte=week_start, timestamp__lt=week_start + timedelta(days=7))
-    weekly_data = week_logs.annotate(date=TruncDate('timestamp')).values('date').annotate(count=Count('id')).order_by('date')
-    week_counts_dict = {d['date'].weekday(): d['count'] for d in weekly_data}
-    weekly_labels = [(week_start + timedelta(days=i)).strftime('%A') for i in range(7)]
-    weekly_counts = [week_counts_dict.get(i, 0) for i in range(7)]
-
-    # Monthly chart (count vs week for all weeks in the month)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_logs = all_logs.filter(timestamp__gte=month_start)
-    monthly_data = month_logs.annotate(week=TruncWeek('timestamp')).values('week').annotate(count=Count('id')).order_by('week')
-    
-    # Create labels for every week of the current month
-    first_day_of_month = month_start
-    first_week_of_month = first_day_of_month - timedelta(days=first_day_of_month.weekday())
-    
-    monthly_labels = []
-    current_week = first_week_of_month
-    while current_week.month == now.month or (current_week.month == now.month-1 and current_week.day > 20):
-        monthly_labels.append(f"Week of {current_week.strftime('%b %d')}")
-        current_week += timedelta(weeks=1)
-        if current_week.year > now.year: break
-
-    month_counts_dict = {d['week'].strftime('%Y-%m-%d'): d['count'] for d in monthly_data}
-    monthly_counts = []
-    current_week_for_data = first_week_of_month
-    for _ in monthly_labels:
-        week_str = current_week_for_data.strftime('%Y-%m-%d')
-        monthly_counts.append(month_counts_dict.get(week_str, 0))
-        current_week_for_data += timedelta(weeks=1)
-
-    context = {
-        'total_smokes': total_smokes,
-        'last_smoke': last_smoke,
-        'total_cost': total_cost,
-        'daily_labels': json.dumps(daily_labels),
-        'daily_counts': json.dumps(daily_counts),
-        'weekly_labels': json.dumps(weekly_labels),
-        'weekly_counts': json.dumps(weekly_counts),
-        'monthly_labels': json.dumps(monthly_labels),
-        'monthly_counts': json.dumps(monthly_counts),
-    }
-    return render(request, 'tracker/stats.html', context)
-
-def signup(request):
+def edit_brand(request, pk):
+    user_brand = get_object_or_404(UserBrand, pk=pk, user=request.user)
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = UserBrandForm(request.POST, instance=user_brand)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
+            form.save()
+            messages.success(request, 'Brand updated successfully!')
+            return redirect('brand_list')
+    else:
+        form = UserBrandForm(instance=user_brand)
+    
+    return render(request, 'tracker/brand_form.html', {'form': form, 'brand': user_brand})
+
+@login_required
+def delete_brand(request, pk):
+    user_brand = get_object_or_404(UserBrand, pk=pk, user=request.user)
+    if request.method == 'POST':
+        user_brand.delete()
+        messages.success(request, 'Brand deleted successfully!')
+        return redirect('brand_list')
+    
+    return render(request, 'tracker/brand_confirm_delete.html', {'brand': user_brand})
+
+@login_required
+def set_goal(request):
+    try:
+        goal = DailyGoal.objects.get(user=request.user)
+    except DailyGoal.DoesNotExist:
+        goal = None
+    
+    if request.method == 'POST':
+        form = DailyGoalForm(request.POST, instance=goal)
+        if form.is_valid():
+            goal = form.save(commit=False)
+            goal.user = request.user
+            goal.save()
+            messages.success(request, 'Daily goal updated successfully!')
             return redirect('home')
     else:
-        form = UserCreationForm()
-    return render(request, 'registration/signup.html', {'form': form})
+        form = DailyGoalForm(instance=goal)
+    
+    return render(request, 'tracker/set_goal.html', {'form': form, 'goal': goal})
+
+@login_required
+def set_defaults(request):
+    try:
+        defaults = UserDefault.objects.get(user=request.user)
+    except UserDefault.DoesNotExist:
+        defaults = None
+    
+    if request.method == 'POST':
+        form = UserDefaultForm(request.POST, instance=defaults)
+        form.fields['user_brand'].queryset = UserBrand.objects.filter(user=request.user)
+        if form.is_valid():
+            defaults = form.save(commit=False)
+            defaults.user = request.user
+            defaults.save()
+            messages.success(request, 'Default settings updated successfully!')
+            return redirect('home')
+    else:
+        form = UserDefaultForm(instance=defaults)
+        form.fields['user_brand'].queryset = UserBrand.objects.filter(user=request.user)
+
+    return render(request, 'tracker/set_defaults.html', {'form': form})
+
+@login_required
+def profile_settings(request):
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, instance=request.user.profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your settings have been updated.')
+            return redirect('profile_settings')
+    else:
+        form = ProfileForm(instance=request.user.profile)
+    return render(request, 'tracker/profile_settings.html', {'form': form})
+
+@login_required
+def quick_log(request):
+    try:
+        defaults = UserDefault.objects.get(user=request.user)
+        if not defaults.user_brand:
+            messages.error(request, 'Please set your default brand first.')
+            return redirect('set_defaults')
+            
+        SmokeLog.objects.create(
+            user=request.user,
+            user_brand=defaults.user_brand,
+            trigger=defaults.trigger,
+            mood_before=defaults.mood_before,
+            mood_after=defaults.mood_after,
+        )
+        messages.success(request, 'Quick smoke logged successfully!')
+    except UserDefault.DoesNotExist:
+        messages.error(request, 'Please set your default preferences first.')
+        return redirect('set_defaults')
+    return redirect('home')
