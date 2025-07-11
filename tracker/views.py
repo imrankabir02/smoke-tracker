@@ -364,7 +364,7 @@ def quick_log(request):
             mood_before=defaults.mood_before,
             mood_after=defaults.mood_after,
         )
-        messages.success(request, 'Quick smoke logged successfully!')
+        # messages.success(request, 'Quick smoke logged successfully!')
     except UserDefault.DoesNotExist:
         messages.error(request, 'Please set your default preferences first.')
         return redirect('set_defaults')

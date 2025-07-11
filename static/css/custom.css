@@ -125,14 +125,15 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
-    background-color: var(--success-color);
+    background-color:rgb(90, 90, 90); /* Smoky Gray */
     border: none;
     color: var(--text-color);
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, box-shadow 0.3s;
 }
 
 .btn-log-smoke:hover {
-    background-color: #27ae60; /* Darker Emerald */
+    background-color: #4a4a4a; /* Darker Smoky Gray */
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
 }
 
 .btn-log-smoke i {
@@ -157,4 +158,83 @@ body {
 .activity-time {
     font-weight: bold;
     margin-bottom: 10px;
+}
+
+/* Smoke Effect */
+.smoke-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.smoke-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 10%, transparent 40%);
+    opacity: 0;
+    animation: smoke 8s infinite linear;
+    transform-origin: center;
+    pointer-events: none;
+}
+
+@keyframes smoke {
+    0% {
+        transform: scale(1) translate(0, 0);
+        opacity: 0;
+    }
+    25% {
+        transform: scale(1.5) translate(20px, -20px);
+        opacity: 0.3;
+    }
+    50% {
+        transform: scale(2) translate(-20px, 20px);
+        opacity: 0;
+    }
+    75% {
+        transform: scale(1.5) translate(10px, 10px);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(1) translate(0, 0);
+        opacity: 0;
+    }
+}
+
+/* Fire Effect */
+#fire-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+    pointer-events: none;
+}
+
+#fire-container .particle {
+    animation: rise 4s ease-in-out forwards;
+    background-image: radial-gradient(#ff5000 30%, rgba(255, 80, 0, 0) 70%);
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    opacity: 0;
+    position: absolute;
+    bottom: 0;
+    width: 90px;
+    height: 90px;
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(0) scale(1);
+    }
+    25% {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10em) scale(0);
+    }
 }
