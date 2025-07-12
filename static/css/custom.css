@@ -423,3 +423,21 @@ input[type="text"].form-control[readonly] {
         transform: translateY(-10em) scale(0);
     }
 }
+
+#contact-me {
+    padding: 1.5rem 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin-top: 3rem;
+    border-top: 1px solid var(--primary-color);
+}
+
+#contact-me a {
+    color: var(--accent-color);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+#contact-me a:hover {
+    color: var(--text-color);
+}
