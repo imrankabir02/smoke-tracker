@@ -81,6 +81,127 @@ body {
     gap: 20px;
 }
 
+/* Full-screen Overlay Menu for Mobile */
+@media (max-width: 991px) {
+    .navbar-toggler {
+        z-index: 1051; /* Ensure toggler is above overlay */
+        border: none;
+    }
+
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
+
+    .navbar-collapse {
+        position: fixed;
+        top: 0;
+        left: 100%;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(44, 62, 80, 0.85); /* Slightly more transparent */
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: left 0.35s cubic-bezier(0.77, 0, 0.175, 1); /* Smoother transition */
+        z-index: 1050;
+    }
+
+    .navbar-collapse.show {
+        left: 0;
+    }
+
+    .navbar-nav {
+        width: 80%; /* Control the width of the nav container */
+        text-align: left;
+    }
+
+    .nav-item {
+        margin: 15px 0; /* Adjusted margin */
+    }
+
+    .nav-item-indented .nav-link {
+        padding-left: 40px; /* Indent the sub-items */
+        font-size: 1.2rem; /* Slightly smaller font for sub-items */
+        opacity: 0.8;
+    }
+
+    .nav-item-separator {
+        margin: 10px 0;
+    }
+
+    .dropdown-divider {
+        border-top-color: rgba(236, 240, 241, 0.2);
+    }
+
+    .nav-link {
+        font-size: 1.4rem; /* Further adjusted font size */
+        color: var(--text-color) !important;
+        padding: 10px 20px;
+        border-radius: 5px;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .nav-link:hover, .nav-link:focus {
+        background-color: var(--accent-color);
+        color: white !important;
+    }
+
+    /* Hamburger to X animation */
+    .navbar-toggler-icon {
+        background-image: none !important;
+        position: relative;
+        width: 30px;
+        height: 20px;
+        display: inline-block;
+    }
+
+    .navbar-toggler-icon::before,
+    .navbar-toggler-icon::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: var(--text-color);
+        transition: transform 0.3s, top 0.3s;
+    }
+
+    .navbar-toggler-icon::before {
+        top: 0;
+    }
+
+    .navbar-toggler-icon::after {
+        top: 18px; /* height - bar_height */
+    }
+    
+    .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon::before {
+        top: 9px;
+        transform: rotate(45deg);
+    }
+
+    .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon::after {
+        top: 9px;
+        transform: rotate(-45deg);
+    }
+    
+    .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon span {
+        opacity: 0;
+    }
+
+    .navbar-toggler-icon span {
+        position: absolute;
+        left: 0;
+        top: 9px;
+        width: 100%;
+        height: 2px;
+        background-color: var(--text-color);
+        transition: opacity 0.3s;
+    }
+}
+
 @media (min-width: 768px) {
     .dashboard-grid {
         grid-template-columns: repeat(2, 1fr);

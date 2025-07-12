@@ -6,9 +6,31 @@
 <div class="container mt-4">
     <h1 class="mb-4">Admin Dashboard</h1>
 
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-header">Filter Data</div>
+        <div class="card-body">
+            <form method="get" action="{% url 'admin_dashboard' %}">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label for="date_from" class="form-label">From</label>
+                        <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from|default:'' }}">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="date_to" class="form-label">To</label>
+                        <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to|default:'' }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Key Stats -->
     <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card text-white bg-primary mb-3">
                 <div class="card-header">Total Users</div>
                 <div class="card-body">
@@ -16,7 +38,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card text-white bg-success mb-3">
                 <div class="card-header">Total Brands</div>
                 <div class="card-body">
@@ -24,11 +46,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card text-white bg-info mb-3">
                 <div class="card-header">Total Smoke Logs</div>
                 <div class="card-body">
                     <h4 class="card-title">{{ total_smokelogs }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">Avg Smokes/User</div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ avg_smokes_per_user }}</h4>
                 </div>
             </div>
         </div>
@@ -53,8 +83,32 @@
         </div>
     </div>
 
+    <!-- Brand Requests -->
+    <div class="card mb-4">
+        <div class="card-header">
+            Pending Brand Requests
+        </div>
+        <div class="card-body">
+            <ul class="list-group">
+                {% for request in brand_requests %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>{{ request.brand_name }}</strong> requested by {{ request.user.username }}
+                        </span>
+                        <span>
+                            <a href="{% url 'approve_brand_request' request.pk %}" class="btn btn-success btn-sm">Approve</a>
+                            <a href="{% url 'reject_brand_request' request.pk %}" class="btn btn-danger btn-sm">Reject</a>
+                        </span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item">No pending brand requests.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
     <!-- Brand Popularity -->
-    <div class="card">
+    <div class="card mb-4">
         <div class="card-header">
             Brand Popularity
         </div>
@@ -69,6 +123,61 @@
                     <li class="list-group-item">No brand data available.</li>
                 {% endfor %}
             </ul>
+        </div>
+    </div>
+
+    <!-- Data Analysis -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Trigger Analysis</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for trigger in trigger_stats %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ trigger.trigger }}
+                                <span class="badge bg-info rounded-pill">{{ trigger.count }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">No trigger data.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Mood Before Smoking</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for mood in mood_before_stats %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ mood.mood_before }}
+                                <span class="badge bg-secondary rounded-pill">{{ mood.count }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">No mood data.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Mood After Smoking</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for mood in mood_after_stats %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ mood.mood_after }}
+                                <span class="badge bg-dark rounded-pill">{{ mood.count }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">No mood data.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </div>

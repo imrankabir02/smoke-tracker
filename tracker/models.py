@@ -95,3 +95,24 @@ class UserDefault(models.Model):
 
     def __str__(self):
         return f"Defaults for {self.user.username}"
+
+
+class BrandRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    brand_name = models.CharField(max_length=100)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Request for '{self.brand_name}' by {self.user.username} ({self.status})"
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'brand_name')

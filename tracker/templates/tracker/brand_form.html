@@ -9,6 +9,9 @@
                 <h4 class="m-0">{% if brand %}Edit Brand{% else %}Add New Brand{% endif %}</h4>
             </div>
             <div class="card-body">
+                <div class="text-center mb-3">
+                    <p>Can't find your brand? <a href="{% url 'request_brand' %}">Request it here</a>.</p>
+                </div>
                 <form method="post" novalidate>
                     {% csrf_token %}
                     {{ form|crispy }}

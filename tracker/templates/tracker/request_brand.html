@@ -1,0 +1,34 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Request a New Brand{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Request a New Brand</h2>
+                </div>
+                <div class="card-body">
+                    <p>Can't find the brand you're looking for? Request for it to be added to our list.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                    </form>
+                    <hr>
+                    <h3 class="mt-4">Your Previous Requests</h3>
+                    {% for request in previous_requests %}
+                        <div class="alert alert-info">
+                            <strong>{{ request.brand_name }}</strong> - Status: <span class="badge bg-secondary">{{ request.get_status_display }}</span>
+                        </div>
+                    {% empty %}
+                        <p>You haven't made any requests yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

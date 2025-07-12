@@ -7,8 +7,8 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg
 from datetime import datetime, timedelta
-from .models import SmokeLog, Brand, DailyGoal, UserDefault, UserBrand, Profile
-from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm
+from .models import SmokeLog, Brand, DailyGoal, UserDefault, UserBrand, Profile, BrandRequest
+from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm, BrandRequestForm
 from .utils import calculate_streak, get_trigger_stats, get_mood_impact
 
 def signup(request):
@@ -292,6 +292,25 @@ def edit_brand(request, pk):
     return render(request, 'tracker/brand_form.html', {'form': form, 'brand': user_brand})
 
 @login_required
+def request_brand(request):
+    if request.method == 'POST':
+        form = BrandRequestForm(request.POST)
+        if form.is_valid():
+            brand_request = form.save(commit=False)
+            brand_request.user = request.user
+            brand_request.save()
+            messages.success(request, 'Your request has been submitted for review.')
+            return redirect('request_brand')
+    else:
+        form = BrandRequestForm()
+    
+    previous_requests = BrandRequest.objects.filter(user=request.user)
+    return render(request, 'tracker/request_brand.html', {
+        'form': form,
+        'previous_requests': previous_requests
+    })
+
+@login_required
 def delete_brand(request, pk):
     user_brand = get_object_or_404(UserBrand, pk=pk, user=request.user)
     if request.method == 'POST':
@@ -418,6 +437,14 @@ def setup_wizard(request, step=1):
                     user_brand.save()
                     messages.info(request, 'Brand price updated.')
 
+                # Check if all brands have been added
+                user_brand_count = UserBrand.objects.filter(user=request.user).count()
+                total_brand_count = Brand.objects.count()
+
+                if user_brand_count >= total_brand_count:
+                    messages.success(request, "All available brands have been added.")
+                    return redirect('setup_wizard', step=3)
+
                 if 'add_another' in request.POST:
                     return redirect('setup_wizard', step=2)
                 return redirect('setup_wizard', step=3)
@@ -457,14 +484,57 @@ def setup_wizard(request, step=1):
 
 
 @user_passes_test(lambda u: u.is_superuser)
+def approve_brand_request(request, pk):
+    brand_request = get_object_or_404(BrandRequest, pk=pk)
+    Brand.objects.get_or_create(name=brand_request.brand_name)
+    brand_request.status = 'approved'
+    brand_request.save()
+    messages.success(request, f"Brand '{brand_request.brand_name}' has been approved and added to the list.")
+    return redirect('admin_dashboard')
+
+@user_passes_test(lambda u: u.is_superuser)
+def reject_brand_request(request, pk):
+    brand_request = get_object_or_404(BrandRequest, pk=pk)
+    brand_request.status = 'rejected'
+    brand_request.save()
+    messages.warning(request, f"Request for brand '{brand_request.brand_name}' has been rejected.")
+    return redirect('admin_dashboard')
+
+@user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
+    # Time-based filtering
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    smokelogs_query = SmokeLog.objects.all()
+    if date_from:
+        smokelogs_query = smokelogs_query.filter(timestamp__date__gte=date_from)
+    if date_to:
+        smokelogs_query = smokelogs_query.filter(timestamp__date__lte=date_to)
+
     total_users = User.objects.count()
     total_brands = Brand.objects.count()
-    total_smokelogs = SmokeLog.objects.count()
+    total_smokelogs = smokelogs_query.count()
 
-    user_smoke_counts = User.objects.annotate(smoke_count=Count('smokelog')).order_by('-smoke_count')[:10]
+    # Analytics
+    if total_users > 0:
+        avg_smokes_per_user = total_smokelogs / total_users
+    else:
+        avg_smokes_per_user = 0
 
-    brand_smoke_counts = Brand.objects.annotate(smoke_count=Count('userbrand__smokelog')).order_by('-smoke_count')
+    user_smoke_counts = User.objects.annotate(
+        smoke_count=Count('smokelog', filter=smokelogs_query.filter(user_id__in=User.objects.all()).values('user_id'))
+    ).order_by('-smoke_count')[:10]
+
+    brand_smoke_counts = Brand.objects.annotate(
+        smoke_count=Count('userbrand__smokelog', filter=smokelogs_query.filter(user_brand__brand_id__in=Brand.objects.all()).values('user_brand__brand_id'))
+    ).order_by('-smoke_count')
+
+    trigger_stats = smokelogs_query.values('trigger').annotate(count=Count('trigger')).order_by('-count')
+    mood_before_stats = smokelogs_query.values('mood_before').annotate(count=Count('mood_before')).order_by('-count')
+    mood_after_stats = smokelogs_query.values('mood_after').annotate(count=Count('mood_after')).order_by('-count')
+
+    brand_requests = BrandRequest.objects.filter(status='pending')
 
     context = {
         'total_users': total_users,
@@ -472,5 +542,12 @@ def admin_dashboard(request):
         'total_smokelogs': total_smokelogs,
         'user_smoke_counts': user_smoke_counts,
         'brand_smoke_counts': brand_smoke_counts,
+        'brand_requests': brand_requests,
+        'avg_smokes_per_user': f"{avg_smokes_per_user:.2f}",
+        'trigger_stats': trigger_stats,
+        'mood_before_stats': mood_before_stats,
+        'mood_after_stats': mood_after_stats,
+        'date_from': date_from,
+        'date_to': date_to,
     }
     return render(request, 'tracker/admin_dashboard.html', context)

@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Brand, SmokeLog, DailyGoal, UserDefault, UserBrand, Profile
+from .models import Brand, SmokeLog, DailyGoal, UserDefault, UserBrand, Profile, BrandRequest
 from zoneinfo import available_timezones
 
 class SignUpForm(UserCreationForm):
@@ -100,4 +100,19 @@ class UserDefaultForm(forms.ModelForm):
             'trigger': forms.Select(attrs={'class': 'form-select'}),
             'mood_before': forms.Select(attrs={'class': 'form-select'}),
             'mood_after': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+
+class BrandRequestForm(forms.ModelForm):
+    class Meta:
+        model = BrandRequest
+        fields = ['brand_name']
+        widgets = {
+            'brand_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter the name of the brand you want to request'
+            }),
+        }
+        labels = {
+            'brand_name': 'Brand Name'
         }
