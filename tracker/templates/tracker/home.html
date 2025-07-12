@@ -30,7 +30,7 @@
         <div id="fire-container"></div>
         <a href="{% url 'quick_log' %}" id="log-smoke-btn" class="btn btn-log-smoke w-100 h-100">
             <i class="bi bi-plus-circle-fill"></i>
-            <span>Log a Smoke</span>
+            <span>Log {% if user_defaults and user_defaults.user_brand %}{{ user_defaults.user_brand.brand.name }}{% endif %}</span>
         </a>
     </div>
 
@@ -38,7 +38,7 @@
         <h5 class="widget-title">Quick Actions</h5>
         <div class="action-buttons">
             <a href="{% url 'log_smoke' %}" class="btn btn-primary w-100 mb-2">
-                <i class="bi bi-plus-circle"></i> Manual Log
+                <i class="bi bi-plus-circle"></i> Log a different
             </a>
             <a href="{% url 'stats' %}" class="btn btn-info w-100 mb-2">
                 <i class="bi bi-graph-up"></i> View Stats

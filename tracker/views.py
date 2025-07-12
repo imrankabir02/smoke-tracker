@@ -58,6 +58,11 @@ def home(request):
     
     # Recent activity
     recent_logs = logs[:1]
+
+    try:
+        user_defaults = UserDefault.objects.get(user=request.user)
+    except UserDefault.DoesNotExist:
+        user_defaults = None
     
     context = {
         'hours_since_last': hours_since_last,
@@ -67,6 +72,7 @@ def home(request):
         'progress_percentage': progress_percentage,
         'recent_logs': recent_logs,
         'last_smoke': last_smoke,
+        'user_defaults': user_defaults,
     }
     
     return render(request, 'tracker/home.html', context)
