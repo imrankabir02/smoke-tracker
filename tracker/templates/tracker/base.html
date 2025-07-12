@@ -35,13 +35,12 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'stats' %}">Statistics</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'brand_list' %}">Brands</a>
-                        </li>
-                        
                         <!-- Indented links for mobile overlay -->
                         <li class="nav-item nav-item-separator d-lg-none"><hr class="dropdown-divider"></li>
                         <li class="nav-item nav-item-indented d-lg-none"><a class="nav-link" href="{% url 'set_goal' %}">Set Daily Goal</a></li>
+                        <li class="nav-item nav-item-indented d-lg-none">
+                            <a class="nav-link" href="{% url 'brand_list' %}">Set Brands</a>
+                        </li>
                         <li class="nav-item nav-item-indented d-lg-none"><a class="nav-link" href="{% url 'set_defaults' %}">Set Defaults</a></li>
                         <li class="nav-item nav-item-indented d-lg-none"><a class="nav-link" href="{% url 'profile_settings' %}">Settings</a></li>
                         {% if user.is_superuser %}

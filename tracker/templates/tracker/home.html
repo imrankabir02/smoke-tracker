@@ -48,6 +48,23 @@
             </a>
         </div>
     </div>
+    <div class="main-widget cost-analysis">
+        <h5 class="widget-title"><i class="bi bi-cash-coin"></i> Cost Analysis</h5>
+        <div class="cost-grid">
+            <div class="cost-item">
+                <p class="cost-label">Today</p>
+                <h4 class="cost-value">{{ user.profile.currency }}{{ today_cost|floatformat:2 }}</h4>
+            </div>
+            <div class="cost-item">
+                <p class="cost-label">This Week</p>
+                <h4 class="cost-value">{{ user.profile.currency }}{{ week_cost|floatformat:2 }}</h4>
+            </div>
+            <div class="cost-item">
+                <p class="cost-label">This Month</p>
+                <h4 class="cost-value">{{ user.profile.currency }}{{ month_cost|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% if recent_logs %}

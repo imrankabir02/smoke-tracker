@@ -1,14 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg
 from datetime import datetime, timedelta
 from .models import SmokeLog, Brand, DailyGoal, UserDefault, UserBrand, Profile, BrandRequest
-from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm, BrandRequestForm
+from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm, BrandRequestForm, CustomPasswordChangeForm
 from .utils import calculate_streak, get_trigger_stats, get_mood_impact
 
 def signup(request):
@@ -55,6 +55,18 @@ def home(request):
         daily_limit = 10 # Default value
     
     progress_percentage = min(100, (today_smokes / daily_limit) * 100) if daily_limit > 0 else 0
+
+    # Cost analysis
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+
+    today_logs = logs.filter(timestamp__date=today)
+    week_logs = logs.filter(timestamp__date__gte=week_ago)
+    month_logs = logs.filter(timestamp__date__gte=month_ago)
+
+    today_cost = today_logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
+    week_cost = week_logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
+    month_cost = month_logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
     
     # Recent activity
     recent_logs = logs[:1]
@@ -73,6 +85,9 @@ def home(request):
         'recent_logs': recent_logs,
         'last_smoke': last_smoke,
         'user_defaults': user_defaults,
+        'today_cost': today_cost,
+        'week_cost': week_cost,
+        'month_cost': month_cost,
     }
     
     return render(request, 'tracker/home.html', context)
@@ -365,14 +380,32 @@ def set_defaults(request):
 @login_required
 def profile_settings(request):
     if request.method == 'POST':
-        form = ProfileForm(request.POST, instance=request.user.profile)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Your settings have been updated.')
-            return redirect('profile_settings')
+        profile_form = ProfileForm(request.POST, instance=request.user.profile)
+        password_form = CustomPasswordChangeForm(request.user, request.POST)
+        
+        if 'update_profile' in request.POST:
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, 'Your settings have been updated.')
+                return redirect('profile_settings')
+        
+        elif 'change_password' in request.POST:
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)  # Important!
+                messages.success(request, 'Your password was successfully updated!')
+                return redirect('profile_settings')
+            else:
+                messages.error(request, 'Please correct the error below.')
+
     else:
-        form = ProfileForm(instance=request.user.profile)
-    return render(request, 'tracker/profile_settings.html', {'form': form})
+        profile_form = ProfileForm(instance=request.user.profile)
+        password_form = CustomPasswordChangeForm(request.user)
+        
+    return render(request, 'tracker/profile_settings.html', {
+        'profile_form': profile_form,
+        'password_form': password_form
+    })
 
 @login_required
 def quick_log(request):
