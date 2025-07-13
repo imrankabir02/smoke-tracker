@@ -11,6 +11,11 @@ from .models import SmokeLog, Brand, DailyGoal, UserDefault, UserBrand, Profile,
 from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm, BrandRequestForm, CustomPasswordChangeForm
 from .utils import calculate_streak, get_trigger_stats, get_mood_impact
 
+def landing(request):
+    if request.user.is_authenticated:
+        return redirect('home') # This now points to /dashboard/
+    return render(request, 'tracker/landing.html')
+
 def signup(request):
     if request.method == 'POST':
         form = SignUpForm(request.POST)
