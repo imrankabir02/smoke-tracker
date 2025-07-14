@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Brand, UserBrand, DailyGoal, SmokeLog, UserDefault
+from .models import Brand, UserBrand, DailyGoal, SmokeLog, UserDefault, Profile
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
@@ -29,3 +29,10 @@ class UserDefaultAdmin(admin.ModelAdmin):
     list_display = ('user', 'user_brand', 'trigger')
     list_filter = ('user',)
     search_fields = ('user__username', 'user_brand__brand__name')
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'timezone', 'currency', 'setup_complete')
+    search_fields = ('user__username',)
+    list_filter = ('setup_complete',)
+    list_editable = ('timezone', 'currency', 'setup_complete')

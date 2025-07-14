@@ -141,3 +141,37 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+PWA_APP_NAME = 'SmokeTracker'
+PWA_APP_DESCRIPTION = "Track your smoking habits"
+PWA_APP_THEME_COLOR = '#0A0302'
+PWA_APP_BACKGROUND_COLOR = '#FFFFFF'
+PWA_APP_DISPLAY = 'standalone'
+PWA_APP_SCOPE = '/'
+PWA_APP_ORIENTATION = 'any'
+PWA_APP_START_URL = '/'
+PWA_APP_ICONS = [
+    {
+        'src': '/static/images/icon-192x192.webp',
+        'sizes': '192x192'
+    },
+    {
+        'src': '/static/images/icon-256x256.webp',
+        'sizes': '256x256'
+    },
+    {
+        'src': '/static/images/icon-384x384.webp',
+        'sizes': '384x384'
+    },
+    {
+        'src': '/static/images/icon-512x512.webp',
+        'sizes': '512x512'
+    }
+]
+PWA_APP_ICONS_APPLE = [
+    {
+        'src': '/static/images/icon-192x192.webp',
+        'sizes': '192x192'
+    }
+]
+PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'static/js', 'serviceworker.js')
