@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Brand, UserBrand, DailyGoal, SmokeLog, UserDefault, Profile
+from .models import (
+    Brand, UserBrand, DailyGoal, SmokeLog, UserDefault, Profile,
+    UserPoints, Achievement, UserAchievement
+)
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
@@ -36,3 +39,19 @@ class ProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__username',)
     list_filter = ('setup_complete',)
     list_editable = ('timezone', 'currency', 'setup_complete')
+
+@admin.register(UserPoints)
+class UserPointsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'points', 'last_updated')
+    search_fields = ('user__username',)
+
+@admin.register(Achievement)
+class AchievementAdmin(admin.ModelAdmin):
+    list_display = ('title', 'points_reward')
+    search_fields = ('title',)
+
+@admin.register(UserAchievement)
+class UserAchievementAdmin(admin.ModelAdmin):
+    list_display = ('user', 'achievement', 'date_earned')
+    list_filter = ('user', 'achievement')
+    search_fields = ('user__username', 'achievement__title')

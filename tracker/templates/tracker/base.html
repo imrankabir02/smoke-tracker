@@ -35,6 +35,9 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'stats' %}">Statistics</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'achievements' %}">Achievements</a>
+                        </li>
                         <!-- Indented links for mobile overlay -->
                         <li class="nav-item nav-item-separator d-lg-none"><hr class="dropdown-divider"></li>
                         <li class="nav-item nav-item-indented d-lg-none"><a class="nav-link" href="{% url 'set_goal' %}">Set Daily Goal</a></li>
@@ -55,8 +58,13 @@
                     {% endif %}
                 </ul>
                 
-                <ul class="navbar-nav">
+                <ul class="navbar-nav align-items-center">
                     {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-gem"></i> {{ user.userpoints.points|default:"0" }}
+                            </a>
+                        </li>
                         <!-- Dropdown for desktop view -->
                         <li class="nav-item dropdown d-none d-lg-block">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
@@ -66,6 +74,7 @@
                                 <li><a class="dropdown-item" href="{% url 'set_goal' %}">Set Daily Goal</a></li>
                                 <li><a class="dropdown-item" href="{% url 'brand_list' %}">Set Brands</a></li>
                                 <li><a class="dropdown-item" href="{% url 'set_defaults' %}">Set Defaults</a></li>
+                                <li><a class="dropdown-item" href="{% url 'achievements' %}">My Achievements</a></li>
                                 <li><a class="dropdown-item" href="{% url 'profile_settings' %}">Settings</a></li>
                                 {% if user.is_superuser %}
                                 <li><a class="dropdown-item" href="{% url 'admin_dashboard' %}">Admin Dashboard</a></li>

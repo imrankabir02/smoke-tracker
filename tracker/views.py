@@ -7,7 +7,10 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg
 from datetime import datetime, timedelta
-from .models import SmokeLog, Brand, DailyGoal, UserDefault, UserBrand, Profile, BrandRequest
+from .models import (
+    SmokeLog, Brand, DailyGoal, UserDefault, UserBrand, Profile, BrandRequest,
+    UserPoints, Achievement, UserAchievement
+)
 from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm, BrandRequestForm, CustomPasswordChangeForm
 from .utils import calculate_streak, get_trigger_stats, get_mood_impact
 
@@ -15,6 +18,20 @@ def landing(request):
     if request.user.is_authenticated:
         return redirect('home') # This now points to /dashboard/
     return render(request, 'tracker/landing.html')
+
+@login_required
+def achievements(request):
+    user_achievements = UserAchievement.objects.filter(user=request.user).select_related('achievement')
+    all_achievements = Achievement.objects.all()
+    
+    unlocked_ids = [ua.achievement.id for ua in user_achievements]
+
+    context = {
+        'user_achievements': user_achievements,
+        'all_achievements': all_achievements,
+        'unlocked_ids': unlocked_ids,
+    }
+    return render(request, 'tracker/achievements.html', context)
 
 def signup(request):
     if request.method == 'POST':

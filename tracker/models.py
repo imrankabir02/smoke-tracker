@@ -116,3 +116,32 @@ class BrandRequest(models.Model):
     class Meta:
         ordering = ['-created_at']
         unique_together = ('user', 'brand_name')
+
+
+class UserPoints(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    points = models.IntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.points} Points"
+
+class Achievement(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    points_reward = models.IntegerField(default=0)
+    icon = models.ImageField(upload_to='achievement_icons/', blank=True, null=True)
+    
+    def __str__(self):
+        return self.title
+
+class UserAchievement(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE)
+    date_earned = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'achievement')
+
+    def __str__(self):
+        return f"{self.user.username} earned {self.achievement.title}"

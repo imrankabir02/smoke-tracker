@@ -1,0 +1,35 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}My Achievements{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">My Achievements</h1>
+    <p>Total Points: <span class="badge bg-primary">{{ user.userpoints.points|default:"0" }}</span></p>
+
+    <div class="row">
+        {% for achievement in all_achievements %}
+        <div class="col-md-4 mb-4">
+            <div class="card {% if achievement.id in unlocked_ids %}border-success{% else %}border-light{% endif %}">
+                <div class="card-body text-center">
+                    {% if achievement.icon %}
+                        <img src="{{ achievement.icon.url }}" alt="{{ achievement.title }}" class="img-fluid mb-3" style="max-height: 100px; {% if achievement.id not in unlocked_ids %}filter: grayscale(100%);{% endif %}">
+                    {% else %}
+                        <i class="bi bi-trophy-fill fs-1 mb-3 {% if achievement.id in unlocked_ids %}text-success{% else %}text-muted{% endif %}"></i>
+                    {% endif %}
+                    <h5 class="card-title">{{ achievement.title }}</h5>
+                    <p class="card-text">{{ achievement.description }}</p>
+                    <p class="card-text"><small class="text-muted">+{{ achievement.points_reward }} points</small></p>
+                    {% if achievement.id in unlocked_ids %}
+                        <span class="badge bg-success">Unlocked</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Locked</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

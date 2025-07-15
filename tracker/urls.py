@@ -8,6 +8,7 @@ urlpatterns = [
     path('log/', views.log_smoke, name='log_smoke'),
     path('logs/', views.log_list, name='log_list'),
     path('stats/', views.stats, name='stats'),
+    path('achievements/', views.achievements, name='achievements'),
     path('brands/', views.brand_list, name='brand_list'),
     path('brands/add/', views.add_brand, name='add_brand'),
     path('brands/edit/<int:pk>/', views.edit_brand, name='edit_brand'),
