@@ -10,6 +10,7 @@ class SetupWizardMiddleware:
         if request.user.is_authenticated and hasattr(request.user, 'profile') and not request.user.profile.setup_complete:
             # Allow access to setup wizard, logout, and admin
             allowed_paths = [
+                reverse('home'),
                 reverse('setup_start'),
                 reverse('setup_wizard', args=[1]),
                 reverse('setup_wizard', args=[2]),

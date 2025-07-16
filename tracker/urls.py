@@ -23,4 +23,5 @@ urlpatterns = [
     path('setup/', views.setup_wizard, {'step': 1}, name='setup_start'),
     path('setup/<int:step>/', views.setup_wizard, name='setup_wizard'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin-dashboard/user/<int:user_id>/', views.admin_user_detail, name='admin_user_detail'),
 ]

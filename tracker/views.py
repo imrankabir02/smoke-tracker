@@ -13,6 +13,7 @@ from .models import (
 )
 from .forms import SmokeLogForm, BrandForm, DailyGoalForm, UserDefaultForm, UserBrandForm, ProfileForm, SignUpForm, BrandRequestForm, CustomPasswordChangeForm
 from .utils import calculate_streak, get_trigger_stats, get_mood_impact
+from . import achievement_service
 
 def landing(request):
     if request.user.is_authenticated:
@@ -23,13 +24,21 @@ def landing(request):
 def achievements(request):
     user_achievements = UserAchievement.objects.filter(user=request.user).select_related('achievement')
     all_achievements = Achievement.objects.all()
-    
     unlocked_ids = [ua.achievement.id for ua in user_achievements]
+
+    achievements_with_progress = []
+    for achievement in all_achievements:
+        progress_data = achievement_service.get_user_progress(request.user, achievement)
+        achievements_with_progress.append({
+            'achievement': achievement,
+            'progress_data': progress_data
+        })
 
     context = {
         'user_achievements': user_achievements,
         'all_achievements': all_achievements,
         'unlocked_ids': unlocked_ids,
+        'achievements_with_progress': achievements_with_progress,
     }
     return render(request, 'tracker/achievements.html', context)
 
@@ -98,6 +107,31 @@ def home(request):
     except UserDefault.DoesNotExist:
         user_defaults = None
     
+    # Featured Achievement
+    unlocked_ids = UserAchievement.objects.filter(user=request.user).values_list('achievement_id', flat=True)
+    locked_achievements = Achievement.objects.exclude(id__in=unlocked_ids)
+    
+    featured_achievement = None
+    highest_progress = -1
+
+    # Find the locked achievement with the highest progress
+    for achievement in locked_achievements:
+        progress_data = achievement_service.get_user_progress(request.user, achievement)
+        if progress_data:
+            # Prioritize the one with the highest progress
+            if progress_data['progress'] > highest_progress:
+                highest_progress = progress_data['progress']
+                featured_achievement = {
+                    'achievement': achievement,
+                    'progress_data': progress_data
+                }
+            # If no progress has been made on any, feature the first one
+            elif featured_achievement is None:
+                 featured_achievement = {
+                    'achievement': achievement,
+                    'progress_data': progress_data
+                }
+
     context = {
         'hours_since_last': hours_since_last,
         'minutes_since_last': minutes_since_last,
@@ -110,6 +144,7 @@ def home(request):
         'today_cost': today_cost,
         'week_cost': week_cost,
         'month_cost': month_cost,
+        'featured_achievement': featured_achievement,
     }
     
     return render(request, 'tracker/home.html', context)
@@ -606,3 +641,42 @@ def admin_dashboard(request):
         'date_to': date_to,
     }
     return render(request, 'tracker/admin_dashboard.html', context)
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_user_detail(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    logs = SmokeLog.objects.filter(user=user)
+    
+    total_smokes = logs.count()
+    total_cost = logs.aggregate(total_cost=Sum('user_brand__price'))['total_cost'] or 0
+    
+    if logs.exists():
+        first_log = logs.last()
+        days_tracking = (timezone.now().date() - first_log.timestamp.date()).days + 1
+        daily_average = round(total_smokes / days_tracking, 1)
+    else:
+        daily_average = 0
+        
+    try:
+        daily_goal = DailyGoal.objects.get(user=user).daily_limit
+    except DailyGoal.DoesNotExist:
+        daily_goal = "Not set"
+        
+    try:
+        points = UserPoints.objects.get(user=user).points
+    except UserPoints.DoesNotExist:
+        points = 0
+        
+    achievements = UserAchievement.objects.filter(user=user).select_related('achievement')
+    
+    context = {
+        'user_profile': user,
+        'total_smokes': total_smokes,
+        'total_cost': total_cost,
+        'daily_average': daily_average,
+        'daily_goal': daily_goal,
+        'points': points,
+        'achievements': achievements,
+        'recent_logs': logs[:20],
+    }
+    return render(request, 'tracker/admin_user_detail.html', context)

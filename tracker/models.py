@@ -119,7 +119,7 @@ class BrandRequest(models.Model):
 
 
 class UserPoints(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='userpoints')
     points = models.IntegerField(default=0)
     last_updated = models.DateTimeField(auto_now=True)
 
@@ -127,11 +127,25 @@ class UserPoints(models.Model):
         return f"{self.user.username} - {self.points} Points"
 
 class Achievement(models.Model):
+    ACHIEVEMENT_TYPE_CHOICES = [
+        ('logging', 'Logging'),
+        ('streak', 'Streak'),
+        ('other', 'Other'),
+    ]
+    CRITERIA_TYPE_CHOICES = [
+        ('total_logs', 'Total Logs'),
+        ('streak_days', 'Streak Days'),
+    ]
+
     title = models.CharField(max_length=100)
     description = models.TextField()
     points_reward = models.IntegerField(default=0)
     icon = models.ImageField(upload_to='achievement_icons/', blank=True, null=True)
     
+    achievement_type = models.CharField(max_length=20, choices=ACHIEVEMENT_TYPE_CHOICES, default='other')
+    criteria_type = models.CharField(max_length=20, choices=CRITERIA_TYPE_CHOICES, blank=True, null=True)
+    criteria_value = models.IntegerField(blank=True, null=True)
+
     def __str__(self):
         return self.title
 

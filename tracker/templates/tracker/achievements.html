@@ -9,23 +9,33 @@
     <p>Total Points: <span class="badge bg-primary">{{ user.userpoints.points|default:"0" }}</span></p>
 
     <div class="row">
-        {% for achievement in all_achievements %}
+        {% for item in achievements_with_progress %}
         <div class="col-md-4 mb-4">
-            <div class="card {% if achievement.id in unlocked_ids %}border-success{% else %}border-light{% endif %}">
-                <div class="card-body text-center">
-                    {% if achievement.icon %}
-                        <img src="{{ achievement.icon.url }}" alt="{{ achievement.title }}" class="img-fluid mb-3" style="max-height: 100px; {% if achievement.id not in unlocked_ids %}filter: grayscale(100%);{% endif %}">
+            <div class="card {% if item.achievement.id in unlocked_ids %}border-success{% else %}border-light{% endif %} h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    {% if item.achievement.icon %}
+                        <img src="{{ item.achievement.icon.url }}" alt="{{ item.achievement.title }}" class="img-fluid mb-3 mx-auto" style="max-height: 100px; {% if item.achievement.id not in unlocked_ids %}filter: grayscale(100%);{% endif %}">
                     {% else %}
-                        <i class="bi bi-trophy-fill fs-1 mb-3 {% if achievement.id in unlocked_ids %}text-success{% else %}text-muted{% endif %}"></i>
+                        <i class="bi bi-trophy-fill fs-1 mb-3 {% if item.achievement.id in unlocked_ids %}text-success{% else %}text-muted{% endif %}"></i>
                     {% endif %}
-                    <h5 class="card-title">{{ achievement.title }}</h5>
-                    <p class="card-text">{{ achievement.description }}</p>
-                    <p class="card-text"><small class="text-muted">+{{ achievement.points_reward }} points</small></p>
-                    {% if achievement.id in unlocked_ids %}
-                        <span class="badge bg-success">Unlocked</span>
-                    {% else %}
-                        <span class="badge bg-secondary">Locked</span>
-                    {% endif %}
+                    <h5 class="card-title">{{ item.achievement.title }}</h5>
+                    <p class="card-text">{{ item.achievement.description }}</p>
+                    <p class="card-text"><small class="text-muted">+{{ item.achievement.points_reward }} points</small></p>
+                    
+                    <div class="mt-auto">
+                        {% if item.achievement.id in unlocked_ids %}
+                            <span class="badge bg-success">Unlocked</span>
+                        {% else %}
+                            {% if item.progress_data %}
+                            <div class="progress mt-2" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ item.progress_data.progress }}%;" aria-valuenow="{{ item.progress_data.progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <p class="card-text mt-1"><small>{{ item.progress_data.current }} / {{ item.progress_data.goal }}</small></p>
+                            {% else %}
+                                <span class="badge bg-secondary">Locked</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>

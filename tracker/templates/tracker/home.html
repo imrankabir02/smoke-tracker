@@ -5,6 +5,23 @@
 
 {% block content %}
 <div class="dashboard-grid">
+    {% if featured_achievement %}
+    <div class="main-widget featured-achievement">
+        <h5 class="widget-title"><i class="bi bi-star"></i> Next Achievement</h5>
+        <div class="text-center">
+            <h4 class="mb-2">{{ featured_achievement.achievement.title }}</h4>
+            <p>{{ featured_achievement.achievement.description }}</p>
+            {% if featured_achievement.progress_data %}
+            <div class="progress mt-2" style="height: 20px;">
+                <div class="progress-bar" role="progressbar" style="width: {{ featured_achievement.progress_data.progress }}%;" aria-valuenow="{{ featured_achievement.progress_data.progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <p class="card-text mt-1"><small>{{ featured_achievement.progress_data.current }} / {{ featured_achievement.progress_data.goal }}</small></p>
+            {% endif %}
+            <a href="{% url 'achievements' %}" class="btn btn-sm btn-outline-primary mt-3">View All Achievements</a>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="main-widget streak-counter">
         <h3><i class="bi bi-trophy"></i> Current Streak</h3>
         <h1>{{ hours_since_last }} hours, {{ minutes_since_last }} minutes</h1>
