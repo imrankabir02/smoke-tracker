@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="dashboard-grid">
-    {% if featured_achievement %}
+    {% comment %} {% if featured_achievement %}
     <div class="main-widget featured-achievement">
         <h5 class="widget-title"><i class="bi bi-star"></i> Next Achievement</h5>
         <div class="text-center">
@@ -20,7 +20,7 @@
             <a href="{% url 'achievements' %}" class="btn btn-sm btn-outline-primary mt-3">View All Achievements</a>
         </div>
     </div>
-    {% endif %}
+    {% endif %} {% endcomment %}
 
     <div class="main-widget streak-counter">
         <h3><i class="bi bi-trophy"></i> Current Streak</h3>

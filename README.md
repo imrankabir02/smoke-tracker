@@ -4,7 +4,7 @@ Smoke Tracker is a web application designed to help users monitor and reduce the
 
 ## Live Demo
 
-[Link to Live Demo](https://smoketracker01.pythonanywhere.com/)
+[Live Demo](https://smoketracker01.pythonanywhere.com/)
 
 ## Features
 
@@ -47,7 +47,6 @@ Smoke Tracker is a web application designed to help users monitor and reduce the
    ```bash
    pip install -r requirements.txt
    ```
-   *(Note: A `requirements.txt` file will be created in the next step.)*
 
 4. **Apply migrations:**
    ```bash
